@@ -11,5 +11,5 @@
 
 ## Project rules
 - The UI accesses the FastAPI backend through `src/lib/waitlist/api-client.ts` and the React Query hooks in `src/lib/waitlist/hooks.ts`.
-- The Makefile's `API_PORT` variable configures both the backend port and the frontend API URL; it defaults to `8001`.
+- The Makefile's `API_PORT` variable configures the backend port and is passed to the frontend dev client; it defaults to `8001`. Production builds use same-origin API requests.
 - The backend owns persistent waitlist data. Staff bearer tokens are kept in sessionStorage for the current browser tab.
