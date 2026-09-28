@@ -1,0 +1,666 @@
+openapi: 3.1.0
+info:
+  title: Restaurant Waitlist API
+  version: 1.0.0
+  description: HTTP contract expected by the frontend mock API.
+servers:
+  - url: https://api.example.com
+    description: Replace with the deployed backend URL.
+tags:
+  - name: Authentication
+  - name: Restaurant
+  - name: Waitlist
+  - name: Public
+  - name: Analytics
+paths:
+  /auth/session:
+    get:
+      tags: [Authentication]
+      operationId: getSession
+      summary: Get the current staff session
+      responses:
+        '200':
+          description: Current staff user, or null when signed out.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/StaffUser'
+                  - type: 'null'
+        '500': { $ref: '#/components/responses/ServerError' }
+  /auth/login:
+    post:
+      tags: [Authentication]
+      operationId: login
+      summary: Sign in a staff member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Signed-in staff user and bearer access token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logout
+      summary: Sign out the current staff member
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Session ended.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success: { type: boolean, const: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /restaurant:
+    get:
+      tags: [Restaurant]
+      operationId: getRestaurant
+      summary: Get the configured restaurant
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Restaurant configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Restaurant' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    patch:
+      tags: [Restaurant]
+      operationId: updateRestaurant
+      summary: Update restaurant configuration
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantPatch' }
+      responses:
+        '200':
+          description: Updated restaurant configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Restaurant' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /restaurant/staff:
+    get:
+      tags: [Restaurant]
+      operationId: listStaff
+      summary: List staff members
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Staff members.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/StaffUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    post:
+      tags: [Restaurant]
+      operationId: addStaff
+      summary: Add a staff member
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewStaff' }
+      responses:
+        '201':
+          description: Created staff member.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /restaurant/staff/{staffId}:
+    delete:
+      tags: [Restaurant]
+      operationId: removeStaff
+      summary: Remove a staff member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Staff member removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success: { type: boolean, const: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /waitlist:
+    get:
+      tags: [Waitlist]
+      operationId: listQueue
+      summary: List active waitlist entries in queue order
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active entries ordered by queue position.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WaitlistEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    post:
+      tags: [Waitlist]
+      operationId: addGuest
+      summary: Add a walk-in or other staff-entered guest
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JoinInput' }
+      responses:
+        '201':
+          description: New waitlist entry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitlistEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Phone number already has an active entry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /waitlist/history:
+    get:
+      tags: [Waitlist]
+      operationId: listHistory
+      summary: List inactive and completed waitlist entries
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Entries whose status is not active.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WaitlistEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /waitlist/reorder:
+    put:
+      tags: [Waitlist]
+      operationId: reorderQueue
+      summary: Set queue order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderedIds]
+              properties:
+                orderedIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Active entries in their resulting queue order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WaitlistEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /waitlist/{entryId}:
+    patch:
+      tags: [Waitlist]
+      operationId: updateGuest
+      summary: Update waitlist entry fields
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WaitlistEntryPatch' }
+      responses:
+        '200':
+          description: Updated entry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitlistEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /waitlist/{entryId}/status:
+    put:
+      tags: [Waitlist]
+      operationId: setGuestStatus
+      summary: Change a waitlist entry status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/GuestStatus' }
+      responses:
+        '200':
+          description: Updated entry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitlistEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /waitlist/sms:
+    get:
+      tags: [Waitlist]
+      operationId: listSms
+      summary: List the latest SMS messages
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Up to 30 latest SMS messages.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SmsMessage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /public/restaurants/{slug}:
+    get:
+      tags: [Public]
+      operationId: getPublicRestaurant
+      summary: Get restaurant details for its public join page
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Public restaurant information.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicRestaurantInfo' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /public/restaurants/{slug}/waitlist:
+    post:
+      tags: [Public]
+      operationId: joinRemotely
+      summary: Join a restaurant waitlist remotely
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RemoteJoinInput' }
+      responses:
+        '201':
+          description: Public status token for the created entry.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token]
+                properties:
+                  token: { type: string }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Remote joining is closed or phone number already has an active entry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /public/waitlist/{token}:
+    get:
+      tags: [Public]
+      operationId: getPublicStatus
+      summary: Get customer-facing waitlist status
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Current public status of the waitlist entry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicWaitlistStatus' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /public/waitlist/{token}/confirm:
+    post:
+      tags: [Public]
+      operationId: customerConfirm
+      summary: Confirm the customer is coming
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Updated waitlist entry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitlistEntry' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /public/waitlist/{token}/cancel:
+    post:
+      tags: [Public]
+      operationId: customerCancel
+      summary: Cancel the customer's waitlist entry
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Updated waitlist entry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitlistEntry' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /analytics:
+    get:
+      tags: [Analytics]
+      operationId: getAnalytics
+      summary: Get waitlist analytics for a time range
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: range
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [today, 7d, 30d]
+      responses:
+        '200':
+          description: Analytics summary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '500': { $ref: '#/components/responses/ServerError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Access token returned by POST /auth/login.
+  responses:
+    Unauthorized:
+      description: Authentication is required or the session is invalid.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Requested restaurant, staff member, entry, or public token was not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Request data is invalid, including party size above the restaurant limit.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    GuestStatus:
+      type: string
+      enum: [WAITING, ARRIVED, NOTIFIED, CONFIRMED, SEATED, CANCELLED, NO_SHOW, REMOVED]
+    GuestSource:
+      type: string
+      enum: [WALK_IN, REMOTE]
+    StaffRole:
+      type: string
+      enum: [MANAGER, HOST]
+    SmsType:
+      type: string
+      enum: [WAITLIST_CONFIRMATION, TABLE_NEARLY_READY, CONFIRMATION_RECEIVED]
+    Restaurant:
+      type: object
+      required: [id, slug, name, timezone, phoneCountryCode, remoteJoinEnabled, arrivalWindowMinutes, gracePeriodMinutes, maxPartySize, baseWaitPerGroupMinutes, smsSenderName]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        timezone: { type: string, description: IANA timezone name }
+        phoneCountryCode: { type: string }
+        remoteJoinEnabled: { type: boolean }
+        arrivalWindowMinutes: { type: integer }
+        gracePeriodMinutes: { type: integer }
+        maxPartySize: { type: integer }
+        baseWaitPerGroupMinutes: { type: number }
+        smsSenderName: { type: string }
+    RestaurantPatch:
+      type: object
+      minProperties: 1
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        timezone: { type: string }
+        phoneCountryCode: { type: string }
+        remoteJoinEnabled: { type: boolean }
+        arrivalWindowMinutes: { type: integer }
+        gracePeriodMinutes: { type: integer }
+        maxPartySize: { type: integer }
+        baseWaitPerGroupMinutes: { type: number }
+        smsSenderName: { type: string }
+    StaffUser:
+      type: object
+      required: [id, restaurantId, name, email, role]
+      properties:
+        id: { type: string }
+        restaurantId: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/StaffRole' }
+    LoginResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, const: bearer }
+        expiresIn: { type: integer, description: Token lifetime in seconds }
+        user: { $ref: '#/components/schemas/StaffUser' }
+    NewStaff:
+      type: object
+      required: [name, email, role]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/StaffRole' }
+        password: { type: string, format: password, minLength: 12, description: Optional initial password. Accounts created without one cannot sign in until provisioned. }
+    JoinInput:
+      type: object
+      required: [customerName, phoneNumber, partySize, source]
+      properties:
+        customerName: { type: string }
+        phoneNumber: { type: string }
+        partySize: { type: integer, minimum: 1 }
+        source: { $ref: '#/components/schemas/GuestSource' }
+        staffNotes: { type: string, default: '' }
+    RemoteJoinInput:
+      type: object
+      required: [customerName, phoneNumber, partySize]
+      properties:
+        customerName: { type: string }
+        phoneNumber: { type: string }
+        partySize: { type: integer, minimum: 1 }
+    WaitlistEntry:
+      type: object
+      required: [id, restaurantId, publicToken, customerName, phoneNumber, partySize, source, status, estimatedWaitMinutes, manualWaitOverride, queuePosition, joinedAt, expectedArrivalAt, arrivedAt, notifiedAt, confirmedAt, seatedAt, cancelledAt, staffNotes]
+      properties:
+        id: { type: string }
+        restaurantId: { type: string }
+        publicToken: { type: string }
+        customerName: { type: string }
+        phoneNumber: { type: string }
+        partySize: { type: integer }
+        source: { $ref: '#/components/schemas/GuestSource' }
+        status: { $ref: '#/components/schemas/GuestStatus' }
+        estimatedWaitMinutes: { type: integer }
+        manualWaitOverride: { type: [integer, 'null'] }
+        queuePosition: { type: integer }
+        joinedAt: { type: string, format: date-time }
+        expectedArrivalAt: { type: [string, 'null'], format: date-time }
+        arrivedAt: { type: [string, 'null'], format: date-time }
+        notifiedAt: { type: [string, 'null'], format: date-time }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        seatedAt: { type: [string, 'null'], format: date-time }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+        staffNotes: { type: string }
+    WaitlistEntryPatch:
+      type: object
+      minProperties: 1
+      properties:
+        customerName: { type: string }
+        phoneNumber: { type: string }
+        partySize: { type: integer, minimum: 1 }
+        source: { $ref: '#/components/schemas/GuestSource' }
+        status: { $ref: '#/components/schemas/GuestStatus' }
+        estimatedWaitMinutes: { type: integer }
+        manualWaitOverride: { type: [integer, 'null'] }
+        queuePosition: { type: integer }
+        expectedArrivalAt: { type: [string, 'null'], format: date-time }
+        arrivedAt: { type: [string, 'null'], format: date-time }
+        notifiedAt: { type: [string, 'null'], format: date-time }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        seatedAt: { type: [string, 'null'], format: date-time }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+        staffNotes: { type: string }
+    SmsMessage:
+      type: object
+      required: [id, waitlistEntryId, phoneNumber, messageType, body, status, sentAt]
+      properties:
+        id: { type: string }
+        waitlistEntryId: { type: string }
+        phoneNumber: { type: string }
+        messageType: { $ref: '#/components/schemas/SmsType' }
+        body: { type: string }
+        status: { type: string, enum: [SENT, FAILED] }
+        sentAt: { type: string, format: date-time }
+    PublicRestaurantInfo:
+      type: object
+      required: [name, slug, remoteJoinEnabled, maxPartySize, estimatedWaitRange, partiesWaiting]
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        remoteJoinEnabled: { type: boolean }
+        maxPartySize: { type: integer }
+        estimatedWaitRange:
+          type: array
+          prefixItems: [{ type: integer }, { type: integer }]
+          minItems: 2
+          maxItems: 2
+        partiesWaiting: { type: integer }
+    PublicWaitlistStatus:
+      type: object
+      required: [restaurantName, customerName, partySize, status, estimatedWaitMinutes, gracePeriodMinutes, notifiedAt]
+      properties:
+        restaurantName: { type: string }
+        customerName: { type: string }
+        partySize: { type: integer }
+        status: { $ref: '#/components/schemas/GuestStatus' }
+        estimatedWaitMinutes: { type: integer }
+        gracePeriodMinutes: { type: integer }
+        notifiedAt: { type: [string, 'null'], format: date-time }
+    AnalyticsSummary:
+      type: object
+      required: [guestsServed, averageEstimatedWait, averageActualWait, cancellations, noShows, walkIns, remoteJoins, averagePartySize]
+      properties:
+        guestsServed: { type: integer }
+        averageEstimatedWait: { type: number }
+        averageActualWait: { type: number }
+        cancellations: { type: integer }
+        noShows: { type: integer }
+        walkIns: { type: integer }
+        remoteJoins: { type: integer }
+        averagePartySize: { type: number }
