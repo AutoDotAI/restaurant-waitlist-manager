@@ -1,53 +1,103 @@
-from fastapi import APIRouter, HTTPException, Request, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session
 
 from ..auth import CurrentStaff, hash_password
+from ..entities import AccessTokenRecord, RestaurantRecord, StaffRecord
 from ..models import NewStaff, Restaurant, RestaurantPatch, StaffUser
+from ..store import get_db, new_id, recalculate_queue, restaurant_to_api, staff_to_api
 
 router = APIRouter(tags=["Restaurant"])
 
 
+def restaurant_record(db: Session) -> RestaurantRecord:
+    record = db.scalar(select(RestaurantRecord).order_by(RestaurantRecord.id).limit(1))
+    if record is None:
+        raise HTTPException(status_code=404, detail="Restaurant not found.")
+    return record
+
+
 @router.get("/restaurant", response_model=Restaurant)
-def get_restaurant(request: Request, user: CurrentStaff) -> Restaurant:
+def get_restaurant(
+    user: CurrentStaff,
+    db: Annotated[Session, Depends(get_db)],
+) -> Restaurant:
     del user
-    return request.app.state.store.restaurant
+    return restaurant_to_api(restaurant_record(db))
 
 
 @router.patch("/restaurant", response_model=Restaurant)
-def update_restaurant(payload: RestaurantPatch, request: Request, user: CurrentStaff) -> Restaurant:
+def update_restaurant(
+    payload: RestaurantPatch,
+    user: CurrentStaff,
+    db: Annotated[Session, Depends(get_db)],
+) -> Restaurant:
     del user
-    store = request.app.state.store
-    changes = payload.model_dump(exclude_unset=True)
-    store.restaurant = store.restaurant.model_copy(update=changes)
-    store.recalculate()
-    return store.restaurant
+    record = restaurant_record(db)
+    field_map = {
+        "slug": "slug",
+        "name": "name",
+        "timezone": "timezone",
+        "phoneCountryCode": "phone_country_code",
+        "remoteJoinEnabled": "remote_join_enabled",
+        "arrivalWindowMinutes": "arrival_window_minutes",
+        "gracePeriodMinutes": "grace_period_minutes",
+        "maxPartySize": "max_party_size",
+        "baseWaitPerGroupMinutes": "base_wait_per_group_minutes",
+        "smsSenderName": "sms_sender_name",
+    }
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(record, field_map[field], value)
+    recalculate_queue(db, record)
+    db.commit()
+    db.refresh(record)
+    return restaurant_to_api(record)
 
 
 @router.get("/restaurant/staff", response_model=list[StaffUser])
-def list_staff(request: Request, user: CurrentStaff) -> list[StaffUser]:
+def list_staff(
+    user: CurrentStaff,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[StaffUser]:
     del user
-    return [account.user for account in request.app.state.store.staff.values()]
+    records = db.scalars(select(StaffRecord).order_by(StaffRecord.name)).all()
+    return [staff_to_api(record) for record in records]
 
 
 @router.post("/restaurant/staff", response_model=StaffUser, status_code=status.HTTP_201_CREATED)
-def add_staff(payload: NewStaff, request: Request, user: CurrentStaff) -> StaffUser:
+def add_staff(
+    payload: NewStaff,
+    user: CurrentStaff,
+    db: Annotated[Session, Depends(get_db)],
+) -> StaffUser:
     del user
-    store = request.app.state.store
-    if store.staff_by_email(str(payload.email)):
+    if db.scalar(select(StaffRecord.id).where(func.lower(StaffRecord.email) == str(payload.email).lower())):
         raise HTTPException(status_code=409, detail="A staff account already uses that email.")
-    staff_user = StaffUser(
-        id=store.new_id("staff"), restaurantId=store.restaurant.id,
-        name=payload.name, email=payload.email, role=payload.role,
+    restaurant = restaurant_record(db)
+    record = StaffRecord(
+        id=new_id("staff"), restaurant_id=restaurant.id,
+        name=payload.name, email=str(payload.email), role=payload.role,
+        password_hash=hash_password(payload.password) if payload.password is not None else None,
     )
-    password_hash = hash_password(payload.password) if payload.password is not None else None
-    store.add_staff(staff_user, password_hash)
-    return staff_user
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return staff_to_api(record)
 
 
 @router.delete("/restaurant/staff/{staffId}")
-def remove_staff(staffId: str, request: Request, user: CurrentStaff) -> dict[str, bool]:
+def remove_staff(
+    staffId: str,
+    user: CurrentStaff,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, bool]:
     del user
-    store = request.app.state.store
-    if store.staff_by_id(staffId) is None:
+    record = db.get(StaffRecord, staffId)
+    if record is None:
         raise HTTPException(status_code=404, detail="Staff member not found.")
-    store.remove_staff(staffId)
+    db.execute(delete(AccessTokenRecord).where(AccessTokenRecord.staff_id == staffId))
+    db.delete(record)
+    db.commit()
     return {"success": True}

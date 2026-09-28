@@ -4,10 +4,13 @@ import secrets
 import time
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 
+from .entities import AccessTokenRecord, StaffRecord
 from .models import StaffUser
+from .store import get_db, staff_to_api
 
 TOKEN_TTL_SECONDS = 8 * 60 * 60
 _Scrypt = dict(n=2**14, r=8, p=1)
@@ -39,42 +42,40 @@ def token_digest(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def issue_token(request: Request, staff_id: str) -> str:
+def issue_token(db: Session, staff_id: str) -> str:
     token = secrets.token_urlsafe(32)
-    request.app.state.store.sessions[token_digest(token)] = {
-        "staff_id": staff_id,
-        "expires_at": int(time.time()) + TOKEN_TTL_SECONDS,
-    }
+    db.add(AccessTokenRecord(
+        token_hash=token_digest(token),
+        staff_id=staff_id,
+        expires_at=int(time.time()) + TOKEN_TTL_SECONDS,
+    ))
+    db.commit()
     return token
 
 
-def staff_for_token(request: Request, token: str | None) -> StaffUser | None:
+def staff_for_token(db: Session, token: str | None) -> StaffUser | None:
     if not token:
         return None
-    sessions = request.app.state.store.sessions
-    session = sessions.get(token_digest(token))
+    session = db.get(AccessTokenRecord, token_digest(token))
     if not session:
         return None
-    if session["expires_at"] <= int(time.time()):
-        sessions.pop(token_digest(token), None)
+    if session.expires_at <= int(time.time()):
         return None
-    account = request.app.state.store.staff_by_id(session["staff_id"])
-    return account.user if account else None
+    account = db.get(StaffRecord, session.staff_id)
+    return staff_to_api(account) if account else None
 
 
 def optional_current_staff(
-    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> StaffUser | None:
     token = credentials.credentials if credentials and credentials.scheme.lower() == "bearer" else None
-    return staff_for_token(request, token)
+    return staff_for_token(db, token)
 
 
 def require_current_staff(
-    request: Request,
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    user: Annotated[StaffUser | None, Depends(optional_current_staff)],
 ) -> StaffUser:
-    user = optional_current_staff(request, credentials)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

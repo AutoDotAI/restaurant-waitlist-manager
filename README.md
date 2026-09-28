@@ -13,6 +13,9 @@ Open the frontend at <http://localhost:3000>. The FastAPI backend and its
 interactive OpenAPI docs are at <http://localhost:8001> and
 <http://localhost:8001/docs>.
 
+The backend stores data in `backend/waitlist.db` by default. Set `DATABASE_URL`
+to choose a different SQLAlchemy database URL.
+
 Run only one service with `make frontend` or `make backend`. Run the backend
 tests with `make test`. Set `API_PORT=8000` if you want the backend to use a
 different port.

@@ -57,14 +57,6 @@ class StaffUser(ApiModel):
     role: StaffRole
 
 
-class StaffAccount:
-    """Private auth record; password hashes never leave the store layer."""
-
-    def __init__(self, user: StaffUser, password_hash: str | None):
-        self.user = user
-        self.password_hash = password_hash
-
-
 class LoginInput(ApiModel):
     email: EmailStr
     password: str = Field(min_length=1)
