@@ -1,5 +1,8 @@
 .DEFAULT_GOAL := help
 
+API_PORT ?= 8001
+FRONTEND_PORT ?= 3000
+
 .PHONY: help install backend-install frontend-install dev backend frontend test build
 
 help: ## Show available commands
@@ -16,11 +19,11 @@ frontend-install: ## Install frontend dependencies with npm
 dev: ## Run the backend API and frontend dev server together
 	$(MAKE) --jobs=2 backend frontend
 
-backend: ## Run the FastAPI server at http://localhost:8000
-	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+backend: ## Run the FastAPI server (port defaults to 8001)
+	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port $(API_PORT)
 
-frontend: ## Run the frontend dev server at http://localhost:3000
-	cd frontend && npm run dev -- --host 0.0.0.0 --port 3000
+frontend: ## Run the frontend dev server (port defaults to 3000)
+	cd frontend && npm run dev -- --host 0.0.0.0 --port $(FRONTEND_PORT)
 
 test: ## Run backend tests
 	cd backend && uv run pytest

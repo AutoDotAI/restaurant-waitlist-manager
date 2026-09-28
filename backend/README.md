@@ -7,7 +7,7 @@ Run from this directory:
 
 ```sh
 uv sync
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --port 8001
 uv run pytest
 ```
 
