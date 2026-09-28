@@ -10,5 +10,6 @@
 <!-- LOVABLE:END -->
 
 ## Project rules
-- Backend is mocked behind `src/lib/waitlist/mock-api.ts` (`api` object) — the only replacement seam; UI talks to it through the React Query hooks in `src/lib/waitlist/hooks.ts`.
-- Mock data persists in localStorage under `waitlist-mock-db-v1`, so refreshes keep queue state without a server.
+- The UI accesses the FastAPI backend through `src/lib/waitlist/api-client.ts` and the React Query hooks in `src/lib/waitlist/hooks.ts`.
+- Set `VITE_API_BASE_URL` to override the backend URL; it defaults to `http://localhost:8001`.
+- The backend owns persistent waitlist data. Staff bearer tokens are kept in sessionStorage for the current browser tab.

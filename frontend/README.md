@@ -1,6 +1,8 @@
-# Backend Mock Buddy
+# Restaurant Waitlist Manager frontend
 
-So I want to create an application that would be the front end for this and I already want to start thinking about creating the backend so right now for the backend I want you to just mock the calls to backend and then later I will implement the backend myself
+The frontend uses the FastAPI service in `../backend` for staff, waitlist,
+restaurant, analytics, and public guest operations. The API URL defaults to
+`http://localhost:8001`; set `VITE_API_BASE_URL` in `.env.local` to override it.
 
 This project was built with [Lovable](https://lovable.dev).
 
@@ -14,11 +16,9 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Prefer working locally? From the repository root, install dependencies and start both services with:
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+make install
+make dev
 ```

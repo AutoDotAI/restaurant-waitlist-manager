@@ -22,7 +22,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const login = useLogin();
   const [email, setEmail] = useState("claire@obermamma.fr");
-  const [password, setPassword] = useState("demo1234");
+  const [password, setPassword] = useState("demo-password");
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -65,8 +65,7 @@ function LoginPage() {
         </form>
 
         <p className="mt-6 text-xs text-muted-foreground">
-          Demo accounts: claire@obermamma.fr (manager) · tom@obermamma.fr (host). Any password works until the real
-          backend is connected.
+          Demo accounts: claire@obermamma.fr (manager) · tom@obermamma.fr (host). Password: demo-password.
         </p>
       </div>
     </div>

@@ -45,7 +45,7 @@ function SettingsPage() {
   const removeStaff = useRemoveStaff();
 
   const [form, setForm] = useState<Restaurant | null>(null);
-  const [newStaff, setNewStaff] = useState({ name: "", email: "", role: "HOST" as StaffRole });
+  const [newStaff, setNewStaff] = useState({ name: "", email: "", password: "", role: "HOST" as StaffRole });
 
   useEffect(() => {
     if (restaurant.data) setForm(restaurant.data);
@@ -182,7 +182,7 @@ function SettingsPage() {
           </ul>
 
           {isManager && (
-            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_10rem_auto]">
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_10rem_auto]">
               <Input
                 placeholder="Name"
                 value={newStaff.name}
@@ -192,6 +192,13 @@ function SettingsPage() {
                 placeholder="Email"
                 value={newStaff.email}
                 onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+              />
+              <Input
+                aria-label="Initial password"
+                type="password"
+                placeholder="Initial password (12+ chars)"
+                value={newStaff.password}
+                onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
               />
               <Select
                 value={newStaff.role}
@@ -207,14 +214,14 @@ function SettingsPage() {
               </Select>
               <Button
                 onClick={() => {
-                  if (!newStaff.name.trim() || !newStaff.email.includes("@")) {
-                    toast.error("Enter a name and a valid email.");
+                  if (!newStaff.name.trim() || !newStaff.email.includes("@") || newStaff.password.length < 12) {
+                    toast.error("Enter a name, valid email, and password with at least 12 characters.");
                     return;
                   }
                   addStaff.mutate(newStaff, {
                     onSuccess: () => {
                       toast.success("Staff member added");
-                      setNewStaff({ name: "", email: "", role: "HOST" });
+                      setNewStaff({ name: "", email: "", password: "", role: "HOST" });
                     },
                   });
                 }}

@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               variant="ghost"
               size="icon"
               aria-label="Sign out"
-              onClick={() => logout.mutate(undefined, { onSuccess: () => navigate({ to: "/login" }) })}
+              onClick={() => logout.mutate(undefined, { onSettled: () => navigate({ to: "/login" }) })}
             >
               <LogOut className="size-4" />
             </Button>

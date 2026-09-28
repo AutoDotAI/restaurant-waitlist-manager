@@ -1,7 +1,9 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .routers import auth, public, restaurant, waitlist
@@ -26,6 +28,17 @@ def create_app(database_url: str | None = None) -> FastAPI:
     )
     application.state.engine = engine
     application.state.session_factory = session_factory
+
+    frontend_origins = os.environ.get(
+        "FRONTEND_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002",
+    )
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=[origin.strip() for origin in frontend_origins.split(",") if origin.strip()],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     application.include_router(auth.router)
     application.include_router(restaurant.router)

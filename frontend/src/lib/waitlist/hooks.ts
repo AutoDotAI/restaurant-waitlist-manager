@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "./mock-api";
+import { api } from "./api-client";
 import type { GuestStatus, JoinInput, Restaurant, StaffUser, WaitlistEntry } from "./types";
 
 const keys = {
@@ -40,7 +40,7 @@ export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.logout(),
-    onSuccess: () => qc.setQueryData(keys.session, null),
+    onSettled: () => qc.setQueryData(keys.session, null),
   });
 }
 
@@ -67,7 +67,7 @@ export function useStaff() {
 export function useAddStaff() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { name: string; email: string; role: StaffUser["role"] }) => api.addStaff(v),
+    mutationFn: (v: { name: string; email: string; role: StaffUser["role"]; password: string }) => api.addStaff(v),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.staff }),
   });
 }
