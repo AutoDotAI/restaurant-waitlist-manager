@@ -9,7 +9,7 @@ import type {
   WaitlistEntry,
 } from "./types";
 
-const API_BASE_URL = (import.meta.env["VITE_API_BASE_URL"] || "http://localhost:8001").replace(/\/+$/, "");
+const API_BASE_URL = `http://localhost:${import.meta.env["API_PORT"] || "8001"}`;
 const TOKEN_STORAGE_KEY = "waitlist-access-token";
 
 interface RequestOptions {

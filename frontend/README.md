@@ -2,7 +2,7 @@
 
 The frontend uses the FastAPI service in `../backend` for staff, waitlist,
 restaurant, analytics, and public guest operations. The API URL defaults to
-`http://localhost:8001`; set `VITE_API_BASE_URL` in `.env.local` to override it.
+`http://localhost:8001`, using the `API_PORT` variable from the root Makefile.
 
 This project was built with [Lovable](https://lovable.dev).
 

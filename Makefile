@@ -1,7 +1,8 @@
 .DEFAULT_GOAL := help
 
 API_PORT ?= 8001
-FRONTEND_PORT ?= 3000
+export API_PORT
+FRONTEND_PORT ?= 3002
 
 .PHONY: help install backend-install frontend-install dev backend frontend test build
 
@@ -22,7 +23,7 @@ dev: ## Run the backend API and frontend dev server together
 backend: ## Run the FastAPI server (port defaults to 8001)
 	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port $(API_PORT)
 
-frontend: ## Run the frontend dev server (port defaults to 3000)
+frontend: ## Run the frontend dev server (port defaults to 3002)
 	cd frontend && npm run dev -- --host 0.0.0.0 --port $(FRONTEND_PORT)
 
 test: ## Run backend tests

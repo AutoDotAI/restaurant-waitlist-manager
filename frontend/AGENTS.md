@@ -11,5 +11,5 @@
 
 ## Project rules
 - The UI accesses the FastAPI backend through `src/lib/waitlist/api-client.ts` and the React Query hooks in `src/lib/waitlist/hooks.ts`.
-- Set `VITE_API_BASE_URL` to override the backend URL; it defaults to `http://localhost:8001`.
+- The Makefile's `API_PORT` variable configures both the backend port and the frontend API URL; it defaults to `8001`.
 - The backend owns persistent waitlist data. Staff bearer tokens are kept in sessionStorage for the current browser tab.
